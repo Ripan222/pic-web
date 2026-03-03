@@ -35,7 +35,7 @@
             padding: 5px;
         }
         
-        /* 缩略图样式：新增模糊过渡 */
+        /* 缩略图样式：模糊过渡+懒加载 */
         .image-item {
             width: 100%;
             height: 200px;
@@ -61,7 +61,7 @@
             white-space: nowrap;
         }
 
-        /* 预览层样式：新增翻页按钮布局 */
+        /* 预览层样式：优化手机端翻页按钮 */
         .preview-overlay {
             position: fixed;
             top: 0;
@@ -73,19 +73,23 @@
             justify-content: center;
             align-items: center;
             z-index: 9999;
+            touch-action: none; /* 禁止默认触摸行为，避免滑动冲突 */
         }
-        /* 预览图容器：限制最大尺寸，留出翻页按钮空间 */
+        /* 预览图容器：限制最大尺寸，适配手机 */
         .preview-container {
             position: relative;
-            max-width: 90%;
+            max-width: 95%; /* 手机端加宽，留按钮空间 */
             max-height: 90%;
+            width: 100%;
         }
         .preview-image {
             max-width: 100%;
             max-height: 100%;
             border-radius: 8px;
+            display: block;
+            margin: 0 auto;
         }
-        /* 翻页按钮样式 */
+        /* 翻页按钮样式：基础样式，电脑端 */
         .preview-btn {
             position: absolute;
             top: 50%;
@@ -93,7 +97,7 @@
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
             color: white;
             border: none;
             font-size: 24px;
@@ -103,31 +107,26 @@
             align-items: center;
             transition: background 0.2s;
             z-index: 10;
+            /* 增大点击区域，即使点到边缘也能触发 */
+            padding: 10px;
+            box-sizing: content-box;
         }
         .preview-btn:hover {
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9);
         }
-        .prev-btn {left: -60px;}
-        .next-btn {right: -60px;}
-        /* 手机端翻页按钮适配 */
-        @media (max-width: 768px) {
-            .preview-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 20px;
-            }
-            .prev-btn {left: -50px;}
-            .next-btn {right: -50px;}
-        }
+        .prev-btn {left: -25px;} /* 调整位置，避免电脑端出屏 */
+        .next-btn {right: -25px;}/* 调整位置，避免电脑端出屏 */
 
+        /* 关闭按钮：优化手机端位置 */
         .close-btn {
             position: absolute;
-            top: -40px;
+            top: -50px;
             right: 0;
             color: white;
             font-size: 40px;
             font-weight: bold;
             cursor: pointer;
+            z-index: 10;
         }
         .close-btn:hover {color: #ff6666;}
 
@@ -181,7 +180,7 @@
             border-color: #2f80ed;
         }
         
-        /* 响应式适配 */
+        /* 响应式适配：重点优化手机端翻页 */
         @media (max-width: 1200px) {
             .image-grid {grid-template-columns: repeat(8, 1fr);}
         } 
@@ -192,6 +191,22 @@
             .calendar-title {font-size: 14px;}
             .date-btn {padding: 4px 12px; font-size: 12px;}
             .calendar-container {gap: 6px;}
+
+            /* 手机端翻页按钮：大幅增大+优化位置，确保能点到 */
+            .preview-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 28px;
+                background: rgba(0,0,0,0.7);
+            }
+            .prev-btn {left: 0px;} /* 贴左边缘，避免出屏 */
+            .next-btn {right: 0px;}/* 贴右边缘，避免出屏 */
+            /* 手机端关闭按钮：调大点击区域 */
+            .close-btn {
+                font-size: 45px;
+                top: -60px;
+                right: 10px;
+            }
         }
     </style>
 </head>
@@ -199,14 +214,12 @@
     <!-- 图片网格容器 -->
     <div class="image-grid" id="imageGrid"></div>
 
-    <!-- 大图预览层：重构布局，新增翻页按钮 -->
+    <!-- 大图预览层：保留翻页按钮 -->
     <div class="preview-overlay" id="previewOverlay">
-        <div class="preview-container">
+        <div class="preview-container" id="previewContainer">
             <span class="close-btn" id="closeBtn">&times;</span>
-            <!-- 上一张按钮 -->
             <button class="preview-btn prev-btn" id="prevBtn">←</button>
             <img class="preview-image" id="previewImage" src="" alt="大图预览">
-            <!-- 下一张按钮 -->
             <button class="preview-btn next-btn" id="nextBtn">→</button>
         </div>
     </div>
@@ -224,6 +237,7 @@
         const imageGrid = document.getElementById('imageGrid');
         const dateBtnList = document.getElementById('dateBtnList');
         const previewOverlay = document.getElementById('previewOverlay');
+        const previewContainer = document.getElementById('previewContainer');
         const previewImage = document.getElementById('previewImage');
         const closeBtn = document.getElementById('closeBtn');
         const prevBtn = document.getElementById('prevBtn');
@@ -247,6 +261,11 @@
         let sortedImageFiles = [];
         // 当前预览的图片索引
         let currentPreviewIndex = 0;
+        // 触摸滑动变量：记录开始/结束坐标
+        let touchStartX = 0;
+        let touchEndX = 0;
+        // 滑动阈值：超过30px才触发翻页，避免轻微滑动误触
+        const SWIPE_THRESHOLD = 30;
 
         // 提取所有图片的日期并去重排序
         const getUniqueDates = () => {
@@ -312,7 +331,7 @@
             imageGrid.appendChild(card);
         });
 
-        // ========== 新增：大图翻页功能 ==========
+        // ========== 翻页核心函数（电脑+手机通用） ==========
         // 上一张
         const prevImage = () => {
             currentPreviewIndex = (currentPreviewIndex - 1 + sortedImageFiles.length) % sortedImageFiles.length;
@@ -324,10 +343,11 @@
             previewImage.src = sortedImageFiles[currentPreviewIndex];
         };
 
-        // 绑定翻页按钮事件
+        // ========== 1. 按钮翻页：优化手机端点击区域 ==========
         prevBtn.addEventListener('click', prevImage);
         nextBtn.addEventListener('click', nextImage);
-        // 绑定键盘翻页（左右键）+ ESC关闭
+
+        // ========== 2. 键盘翻页：电脑端可用 ==========
         document.addEventListener('keydown', (e) => {
             if (!previewOverlay.style.display || previewOverlay.style.display === 'none') return;
             if (e.key === 'Escape') {
@@ -338,6 +358,31 @@
                 nextImage();
             }
         });
+
+        // ========== 3. 触摸滑动翻页：手机端核心修复（新增） ==========
+        // 触摸开始：记录初始X坐标
+        previewContainer.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true}); // passive提升滑动流畅度
+
+        // 触摸结束：记录结束X坐标，判断滑动方向
+        previewContainer.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, {passive: true});
+
+        // 处理滑动逻辑
+        const handleSwipe = () => {
+            const swipeDiff = touchStartX - touchEndX;
+            // 向右滑（手指从左到右）→ 上一张
+            if (swipeDiff < -SWIPE_THRESHOLD) {
+                prevImage();
+            }
+            // 向左滑（手指从右到左）→ 下一张
+            if (swipeDiff > SWIPE_THRESHOLD) {
+                nextImage();
+            }
+        };
 
         // ========== 日历功能 ==========
         const createCalendarBtns = () => {
