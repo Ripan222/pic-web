@@ -93,7 +93,7 @@
             display: block;
             margin: 0 auto;
         }
-        /* 翻页按钮样式：仅在电脑端显示 */
+        /* 翻页按钮样式：基础样式，电脑端 */
         .preview-btn {
             position: absolute;
             top: 50%;
@@ -109,7 +109,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: background 0.2s;
+            transition: all 0.2s;
             z-index: 10;
             /* 增大点击区域，即使点到边缘也能触发 */
             padding: 10px;
@@ -196,10 +196,20 @@
             .date-btn {padding: 4px 12px; font-size: 12px;}
             .calendar-container {gap: 6px;}
 
-            /* 手机端：隐藏翻页按钮，仅保留滑动翻页 */
+            /* 手机端：翻页按钮更隐蔽 */
             .preview-btn {
-                display: none; /* 核心：手机端隐藏按钮 */
+                width: 30px;
+                height: 30px;
+                font-size: 18px;
+                background: rgba(0,0,0,0.3); /* 半透明 */
+                opacity: 0.3; /* 初始透明度 */
+                transition: opacity 0.2s;
             }
+            .preview-btn:hover {
+                opacity: 0.8; /* 点击时变清晰 */
+            }
+            .prev-btn {left: 10px;} /* 贴左边缘，不遮挡图片 */
+            .next-btn {right: 10px;}/* 贴右边缘，不遮挡图片 */
             /* 手机端预览容器：加宽适配小屏幕 */
             .preview-container {
                 max-width: 95%; /* 手机端占屏95%，充分利用空间 */
@@ -347,7 +357,7 @@
             previewImage.src = sortedImageFiles[currentPreviewIndex];
         };
 
-        // ========== 1. 按钮翻页：仅电脑端显示 ==========
+        // ========== 1. 按钮翻页：电脑/手机适配 ==========
         prevBtn.addEventListener('click', prevImage);
         nextBtn.addEventListener('click', nextImage);
 
@@ -363,7 +373,7 @@
             }
         });
 
-        // ========== 3. 触摸滑动翻页：手机端核心（保留） ==========
+        // ========== 3. 触摸滑动翻页：手机端核心 ==========
         // 触摸开始：记录初始X坐标
         previewContainer.addEventListener('touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
