@@ -7,19 +7,35 @@
     <style>
         /* 全局样式 */
         * {margin: 0; padding: 0; box-sizing: border-box;}
-        body {background: #f8f8f8; padding: 20px; font-family: 微软雅黑;}
+        body {background: #f8f8f8; padding: 20px; font-family: 微软雅黑; min-height: 100vh;}
         
-        /* 图片网格：响应式布局（电脑5列、平板3列、手机2列） */
+        /* 图片网格：响应式布局（电脑8列、平板8列、手机4列） */
         .image-grid {
             display: grid;
-            grid-template-columns: repeat(8, 1fr); /* 电脑端5列，视觉更合理 */
-            gap: 15px;
+            grid-template-columns: repeat(8, 1fr); 
+            gap: 20px 15px; /* 上下间距留日期空间 */
             max-width: 1400px;
-            margin: 0 auto;
+            margin: 0 auto 60px; /* 底部留日历空间 */
             padding: 0 10px;
         }
+
+        /* 图片卡片容器：包裹图片+日期 */
+        .image-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        /* 当日图片高亮样式 */
+        .image-card.active {
+            transform: scale(1.03);
+            background: #e8f4ff;
+            border-radius: 10px;
+            padding: 5px;
+        }
         
-        /* 缩略图样式：完整显示，固定高度 */
+        /* 缩略图样式 */
         .image-item {
             width: 100%;
             height: 200px;
@@ -30,7 +46,16 @@
             background-color: #f0f0f0;
         }
         .image-item:hover {transform: scale(1.05);}
-        
+
+        /* 图片下方日期样式 */
+        .image-date {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+            text-align: center;
+            white-space: nowrap;
+        }
+
         /* 预览层样式 */
         .preview-overlay {
             position: fixed;
@@ -55,117 +80,199 @@
             cursor: pointer;
         }
         .close-btn:hover {color: #ff6666;}
+
+        /* ========== 新增：日历视图样式 ========== */
+        .calendar-section {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #fff;
+            border-top: 2px solid #e0e0e0;
+            padding: 12px 0;
+            z-index: 999;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+        .calendar-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+        }
+        .calendar-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-right: 10px;
+            white-space: nowrap;
+        }
+        .date-btn {
+            padding: 6px 16px;
+            border: 1px solid #dcdcdc;
+            border-radius: 20px;
+            background: #fff;
+            color: #333;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 微软雅黑;
+        }
+        .date-btn:hover {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+        .date-btn.active {
+            background: #2f80ed;
+            color: #fff;
+            border-color: #2f80ed;
+        }
+        /* ========== 日历样式结束 ========== */
         
         /* 响应式适配 */
-        @media (max-width: 1200px) {.image-grid {grid-template-columns: repeat(8, 1fr);}} /* 平板3列 */
+        @media (max-width: 1200px) {
+            .image-grid {grid-template-columns: repeat(8, 1fr);}
+        } 
         @media (max-width: 768px) {
-            .image-grid {grid-template-columns: repeat(4, 1fr);} /* 手机2列 */
+            .image-grid {grid-template-columns: repeat(4, 1fr);} 
             .image-item {height: 120px;}
+            .image-date {font-size: 12px;}
+            /* 手机端日历适配 */
+            .calendar-title {font-size: 14px;}
+            .date-btn {padding: 4px 12px; font-size: 12px;}
+            .calendar-container {gap: 6px;}
         }
     </style>
 </head>
 <body>
-    <!-- 图片网格容器（空的，由JS自动填充） -->
+    <!-- 图片网格容器 -->
     <div class="image-grid" id="imageGrid"></div>
 
-    <!-- 大图预览层（唯一ID） -->
+    <!-- 大图预览层 -->
     <div class="preview-overlay" id="previewOverlay">
         <span class="close-btn" id="closeBtn">&times;</span>
         <img class="preview-image" id="previewImage" src="" alt="大图预览">
     </div>
 
-    <script>
-        // ========== 核心：自动读取图片并按文件名排序 ==========
-        const imageGrid = document.getElementById('imageGrid');
-        // 1. 图片文件名列表（请确保这些图片和当前HTML文件在同一文件夹！）
-        const imageFiles = [
-         '3.071.jpg',
-    '3.081.jpg',
-    '3.082.jpg',
-    '3.082.png',
-    '3.083.jpg',
-    '3.084.jpg',
-    '3.085.jpg',
-    '3.086.jpg',
-    '3.087.jpg',
-    '3.131.jpg',
-    '3.133.jpg',
-    '3.134.jpg',
-    '3.141.jpg',
-    '3.141.png',
-    '3.142.jpg',
-    '3.143.jpg',
-    '3.144.jpg',
-    '3.146.jpg',
-    '3.147.jpg',
-    '3.148.jpg',
-    '3.150.jpg',
-    '3.151.jpg',
-    '3.152.jpg',
-    '3.153.jpg',
-    '3.154.jpg',
-    '3.155.jpg',
-    '3.156.jpg',
-    '3.157.png',
-    '3.158.jpg',
-    '3.159.jpg',  '3.159.png',
-    '3.211.jpg',
-    '3.212.jpg',
-    '3.212.png',
-    '3.213.png',
-    '3.214.png',
-    '3.221.jpg',
-    '3.222.jpg',
-    '3.223.jpg',
-    '3.224.png',
-    '3.280.jpg',
-    '3.281.jpg',
-    '3.282.jpg',
-    '3.283.jpg',
-    '3.290.jpg',
-    '3.291.jpg',
-    '3.292.jpg',
-    '3.293.jpg',
-    '4.04.png',
-    '4.05.jpg',
-    '4.06.jpg',
-    '4.12.jpg'
-        ];
+    <!-- ========== 新增：日历视图容器 ========== -->
+    <div class="calendar-section">
+        <div class="calendar-container">
+            <div class="calendar-title">活动日历：</div>
+            <div id="dateBtnList"></div>
+        </div>
+    </div>
+    <!-- ========== 日历容器结束 ========== -->
 
-        // 2. 按文件名的数字排序（比如3.131 < 3.132 < 3.141）
+    <script>
+        // ========== 全局变量 ==========
+        const imageGrid = document.getElementById('imageGrid');
+        const dateBtnList = document.getElementById('dateBtnList');
+        const previewOverlay = document.getElementById('previewOverlay');
+        const previewImage = document.getElementById('previewImage');
+        const closeBtn = document.getElementById('closeBtn');
+        // 图片文件名列表（你的原有列表，已新增3.159.png）
+        const imageFiles = [
+            '3.071.jpg','3.081.jpg','3.082.jpg','3.082.png','3.083.jpg',
+            '3.084.jpg','3.085.jpg','3.086.jpg','3.087.jpg','3.131.jpg',
+            '3.133.jpg','3.134.jpg','3.141.jpg','3.141.png','3.142.jpg',
+            '3.143.jpg','3.144.jpg','3.146.jpg','3.147.jpg','3.148.jpg',
+            '3.150.jpg','3.151.jpg','3.152.jpg','3.153.jpg','3.154.jpg',
+            '3.155.jpg','3.156.jpg','3.157.png','3.158.jpg','3.159.jpg',
+            '3.159.png','3.211.jpg','3.212.jpg','3.212.png','3.213.png',
+            '3.214.png','3.221.jpg','3.222.jpg','3.223.jpg','3.224.png',
+            '3.280.jpg','3.281.jpg','3.282.jpg','3.283.jpg','3.290.jpg',
+            '3.291.jpg','3.292.jpg','3.293.jpg','4.04.png','4.05.jpg',
+            '4.06.jpg','4.12.jpg'
+        ];
+        // 提取所有图片的日期并去重排序（核心：和图片日期保持一致）
+        const getUniqueDates = () => {
+            const dates = imageFiles.map(file => file.substring(0, 4));
+            return [...new Set(dates)].sort((a, b) => parseFloat(a) - parseFloat(b));
+        };
+        const uniqueDates = getUniqueDates();
+
+        // ========== 图片排序+生成 ==========
         imageFiles.sort((a, b) => {
             const numA = parseFloat(a.replace(/[^0-9.]/g, ''));
             const numB = parseFloat(b.replace(/[^0-9.]/g, ''));
-            return numA - numB; // 升序排列
+            return numA - numB;
         });
-
-        // 3. 自动生成图片标签并添加到页面
+        // 生成图片卡片
         imageFiles.forEach((file, index) => {
+            const card = document.createElement('div');
+            card.className = 'image-card';
+            card.dataset.date = file.substring(0, 4); // 给卡片加日期标识，用于筛选
+
             const img = document.createElement('img');
-            img.src = file; // 图片路径（同一目录直接写文件名）
+            img.src = file;
             img.alt = `活动海报${index+1}`;
             img.className = 'image-item';
-            // 点击预览大图
+            // 大图预览
             img.addEventListener('click', () => {
-                document.getElementById('previewImage').src = file;
-                document.getElementById('previewOverlay').style.display = 'flex';
+                previewImage.src = file;
+                previewOverlay.style.display = 'flex';
             });
-            imageGrid.appendChild(img);
+            // 日期文本
+            const dateText = file.substring(0, 4);
+            const dateSpan = document.createElement('span');
+            dateSpan.className = 'image-date';
+            dateSpan.textContent = dateText;
+
+            card.appendChild(img);
+            card.appendChild(dateSpan);
+            imageGrid.appendChild(card);
         });
 
+        // ========== 新增：生成日历日期按钮 ==========
+        const createCalendarBtns = () => {
+            uniqueDates.forEach(date => {
+                const btn = document.createElement('button');
+                btn.className = 'date-btn';
+                btn.dataset.date = date;
+                btn.textContent = date;
+                // 日期按钮点击事件
+                btn.addEventListener('click', () => {
+                    // 取消所有按钮选中状态
+                    document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                    // 选中当前按钮
+                    btn.classList.add('active');
+                    // 筛选并滚动到当日图片
+                    scrollToDateImages(date);
+                });
+                dateBtnList.appendChild(btn);
+            });
+        };
+        // 点击日期→高亮+滚动到当日图片
+        const scrollToDateImages = (targetDate) => {
+            // 取消所有图片高亮
+            document.querySelectorAll('.image-card').forEach(card => card.classList.remove('active'));
+            // 找到当日所有图片卡片
+            const targetCards = document.querySelectorAll(`.image-card[data-date="${targetDate}"]`);
+            if (targetCards.length > 0) {
+                // 高亮当日图片
+                targetCards.forEach(card => card.classList.add('active'));
+                // 滚动到第一个当日图片（平滑滚动）
+                targetCards[0].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        };
+
         // ========== 预览层关闭逻辑 ==========
-        const closeBtn = document.getElementById('closeBtn');
-        const previewOverlay = document.getElementById('previewOverlay');
-        // 点击×关闭
         closeBtn.addEventListener('click', () => previewOverlay.style.display = 'none');
-        // 点击空白处关闭
         previewOverlay.addEventListener('click', (e) => {
             if (e.target === previewOverlay) previewOverlay.style.display = 'none';
         });
-        // 按ESC键关闭
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') previewOverlay.style.display = 'none';
         });
+
+        // ========== 初始化：生成日历+加载图片 ==========
+        createCalendarBtns();
     </script>
 </body>
 </html>
