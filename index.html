@@ -12,7 +12,7 @@
         /* 图片网格：响应式布局（电脑5列、平板3列、手机2列） */
         .image-grid {
             display: grid;
-            grid-template-columns: repeat(10, 1fr); /* 电脑端5列，视觉更合理 */
+            grid-template-columns: repeat(8, 1fr); /* 电脑端5列，视觉更合理 */
             gap: 15px;
             max-width: 1400px;
             margin: 0 auto;
@@ -59,8 +59,8 @@
         /* 响应式适配 */
         @media (max-width: 1200px) {.image-grid {grid-template-columns: repeat(8, 1fr);}} /* 平板3列 */
         @media (max-width: 768px) {
-            .image-grid {grid-template-columns: repeat(6, 1fr);} /* 手机2列 */
-            .image-item {height: 150px;}
+            .image-grid {grid-template-columns: repeat(4, 1fr);} /* 手机2列 */
+            .image-item {height: 120px;}
         }
     </style>
 </head>
