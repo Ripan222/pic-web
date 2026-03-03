@@ -5,87 +5,124 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>茁影社近期活动</title>
     <style>
+        /* 全局样式 */
         * {margin: 0; padding: 0; box-sizing: border-box;}
         body {background: #f8f8f8; padding: 20px; font-family: 微软雅黑;}
-        .image-grid {display: grid;
-    /* 电脑端默认一行5个 */
-    grid-template-columns: repeat(8, 1fr);
-    gap: 15px; /* 图片之间的间距 */
-    max-width: 1400px; /* 网页最大宽度，避免太宽 */
-    margin: 0 auto; /* 居中显示 */
-    padding: 0 10px; /* 左右留白，适配小屏幕 */;}
-        .image-item { width: 100%;
-    height: 200px; /* 固定缩略图高度，控制大小 */
-    object-fit: contain; /* 完整显示图片，不裁剪 */
-    border-radius: 8px;
-    cursor: pointer;
-    transition: transform 0.2s;
-    background-color: #f0f0f0; /* 浅灰背景，避免留白突兀 */;}
-      .image-item:hover {
-    transform: scale(1.05);
-}
-
-/* 平板端适配：一行3个 */
-@media (max-width: 1200px) {
-    .image-grid {
-        grid-template-columns: repeat(5, 1fr);
-    }
-}
-
-/* 手机端适配：一行2个 */
-@media (max-width: 768px) {
-    .image-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-    .image-item {
-        height: 150px; /* 手机端缩略图略小，更适配 */
-    }
-}
-        .preview-overlay {position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 9999;}
+        
+        /* 图片网格：响应式布局（电脑5列、平板3列、手机2列） */
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr); /* 电脑端5列，视觉更合理 */
+            gap: 15px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+        
+        /* 缩略图样式：完整显示，固定高度 */
+        .image-item {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            background-color: #f0f0f0;
+        }
+        .image-item:hover {transform: scale(1.05);}
+        
+        /* 预览层样式 */
+        .preview-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
         .preview-image {max-width: 90%; max-height: 90%; border-radius: 8px;}
-        .close-btn {position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; font-weight: bold; cursor: pointer;}
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
         .close-btn:hover {color: #ff6666;}
+        
+        /* 响应式适配 */
+        @media (max-width: 1200px) {.image-grid {grid-template-columns: repeat(8, 1fr);}} /* 平板3列 */
+        @media (max-width: 768px) {
+            .image-grid {grid-template-columns: repeat(6, 1fr);} /* 手机2列 */
+            .image-item {height: 150px;}
+        }
     </style>
 </head>
 <body>
-    <div class="image-grid">
-        <!-- 👇 这里改图片名，有多少张加多少行 -->
-    <img src="img1.jpg" alt="图片1" class="image-item">
-    <img src="img2.jpg" alt="图片2" class="image-item">
-    <img src="img3.jpg" alt="图片3" class="image-item">
-    <img src="img4.jpg" alt="图片4" class="image-item">
-    <img src="img5.jpg" alt="图片5" class="image-item">
-    <img src="img6.jpg" alt="图片6" class="image-item">
-    <img src="img7.jpg" alt="图片7" class="image-item">
-    <img src="img8.jpg" alt="图片8" class="image-item">
-    <img src="img9.jpg" alt="图片9" class="image-item">
-    <img src="img10.jpg" alt="图片10" class="image-item">
-    <img src="img11.jpg" alt="图片11" class="image-item">
-<img src="img12.jpg" alt="图片12" class="image-item">
-        <!-- 继续加：复制上面一行，改数字和后缀，比如 <img src="img5.png" alt="图片5" class="image-item"> -->
-    </div>
+    <!-- 图片网格容器（空的，由JS自动填充） -->
+    <div class="image-grid" id="imageGrid"></div>
 
+    <!-- 大图预览层（唯一ID） -->
     <div class="preview-overlay" id="previewOverlay">
         <span class="close-btn" id="closeBtn">&times;</span>
         <img class="preview-image" id="previewImage" src="" alt="大图预览">
     </div>
 
     <script>
-        const imageItems = document.querySelectorAll('.image-item');
-        const previewOverlay = document.getElementById('previewOverlay');
-        const previewImage = document.getElementById('previewImage');
-        const closeBtn = document.getElementById('closeBtn');
+        // ========== 核心：自动读取图片并按文件名排序 ==========
+        const imageGrid = document.getElementById('imageGrid');
+        // 1. 图片文件名列表（请确保这些图片和当前HTML文件在同一文件夹！）
+        const imageFiles = [
+            '3.71.jpg', '3.81.jpg', '3.82.jpg', '3.82.png', '3.83.jpg',
+            '3.84.jpg', '3.85.png', '3.86.jpg', '3.87.jpg', '3.131.jpg',
+            '3.133.jpg', '3.134.jpg', '3.141.jpg', '3.141.png', '3.142.jpg',
+            '3.143.jpg', '3.144.jpg', '3.150.jpg', '3.151.jpg', '3.152.jpg',
+            '3.153.jpg', '3.154.jpg', '3.155.jpg', '3.211.jpg', '3.221.jpg',
+            '3.222.jpg', '3.223.jpg', '3.280.jpg', '3.281.jpg', '3.282.jpg',
+            '3.283.jpg', '3.290.jpg', '3.291.jpg', '3.292.jpg', '3.293.jpg',
+            '4.4.png', '4.5.jpg', '4.6.jpg', '4.12.jpg'
+        ];
 
-        imageItems.forEach(item => {
-            item.addEventListener('click', () => {
-                previewImage.src = item.src;
-                previewOverlay.style.display = 'flex';
-            });
+        // 2. 按文件名的数字排序（比如3.131 < 3.132 < 3.141）
+        imageFiles.sort((a, b) => {
+            const numA = parseFloat(a.replace(/[^0-9.]/g, ''));
+            const numB = parseFloat(b.replace(/[^0-9.]/g, ''));
+            return numA - numB; // 升序排列
         });
 
+        // 3. 自动生成图片标签并添加到页面
+        imageFiles.forEach((file, index) => {
+            const img = document.createElement('img');
+            img.src = file; // 图片路径（同一目录直接写文件名）
+            img.alt = `活动海报${index+1}`;
+            img.className = 'image-item';
+            // 点击预览大图
+            img.addEventListener('click', () => {
+                document.getElementById('previewImage').src = file;
+                document.getElementById('previewOverlay').style.display = 'flex';
+            });
+            imageGrid.appendChild(img);
+        });
+
+        // ========== 预览层关闭逻辑 ==========
+        const closeBtn = document.getElementById('closeBtn');
+        const previewOverlay = document.getElementById('previewOverlay');
+        // 点击×关闭
         closeBtn.addEventListener('click', () => previewOverlay.style.display = 'none');
-        previewOverlay.addEventListener('click', (e) => {if(e.target===previewOverlay) previewOverlay.style.display = 'none';});
-        document.addEventListener('keydown', (e) => {if(e.key==='Escape') previewOverlay.style.display = 'none';});
+        // 点击空白处关闭
+        previewOverlay.addEventListener('click', (e) => {
+            if (e.target === previewOverlay) previewOverlay.style.display = 'none';
+        });
+        // 按ESC键关闭
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') previewOverlay.style.display = 'none';
+        });
     </script>
 </body>
 </html>
